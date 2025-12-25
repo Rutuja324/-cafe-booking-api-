@@ -1,0 +1,110 @@
+mysql -u root -p
+
+USE cafe_hub;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150) UNIQUE NOT NULL,
+  phone VARCHAR(15),
+  password VARCHAR(255) NOT NULL,
+  role ENUM('customer', 'owner', 'admin') DEFAULT 'customer',
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  INDEX idx_email (email),
+  INDEX idx_role (role)
+);
+
+
+CREATE TABLE cafes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  description TEXT,
+  location VARCHAR(255) NOT NULL,
+  latitude DECIMAL(10, 8),
+  longitude DECIMAL(11, 8),
+  address TEXT,
+  theme VARCHAR(100), -- 'aesthetic', 'cozy', 'modern', 'cafe'
+  avg_price DECIMAL(8, 2),
+  capacity INT DEFAULT 50,
+  open_time TIME,
+  close_time TIME,
+  status ENUM('pending', 'approved', 'suspended') DEFAULT 'pending',
+  is_featured BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_owner (owner_id),
+  INDEX idx_status (status),
+  INDEX idx_location (location),
+  INDEX idx_theme (theme)
+);
+
+CREATE TABLE cafe_media (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cafe_id INT NOT NULL,
+  type ENUM('photo', 'video') NOT NULL,
+  url VARCHAR(500) NOT NULL,
+  is_primary BOOLEAN DEFAULT false,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (cafe_id) REFERENCES cafes(id) ON DELETE CASCADE,
+  INDEX idx_cafe (cafe_id),
+  INDEX idx_type (type)
+);
+
+CREATE TABLE menu_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cafe_id INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  description TEXT,
+  price DECIMAL(8, 2) NOT NULL,
+  category VARCHAR(100), -- 'coffee', 'food', 'dessert', 'beverages'
+  is_available BOOLEAN DEFAULT true,
+  image_url VARCHAR(500),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (cafe_id) REFERENCES cafes(id) ON DELETE CASCADE,
+  INDEX idx_cafe (cafe_id),
+  INDEX idx_category (category),
+  INDEX idx_available (is_available)
+);
+
+CREATE TABLE bookings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cafe_id INT NOT NULL,
+  user_id INT NOT NULL,
+  booking_date DATE NOT NULL,
+  booking_time TIME NOT NULL,
+  people_count INT NOT NULL CHECK (people_count >= 1 AND people_count <= 20),
+  special_requests TEXT,
+  status ENUM('pending', 'confirmed', 'cancelled', 'completed', 'no_show') DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (cafe_id) REFERENCES cafes(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_cafe_date (cafe_id, booking_date),
+  INDEX idx_user (user_id),
+  INDEX idx_status (status)
+);
+
+CREATE TABLE reviews (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  cafe_id INT NOT NULL,
+  user_id INT NOT NULL,
+  rating INT CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  helpful_count INT DEFAULT 0,
+  is_verified BOOLEAN DEFAULT false, -- only after completed booking
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  FOREIGN KEY (cafe_id) REFERENCES cafes(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_cafe (cafe_id),
+  INDEX idx_user (user_id),
+  INDEX idx_rating (rating)
+);
